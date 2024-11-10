@@ -10,7 +10,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -81,7 +83,12 @@ public class PaymentService {
         for (String user : amountOwedByUser.keySet()) {
             double totalOwed = amountOwedByUser.get(user);
             double totalPaid = amountPaidByUser.getOrDefault(user, 0.0);
-            amountOwed.put(user, totalOwed - totalPaid);
+            double balance = totalOwed - totalPaid;
+
+            // Just add the users that owe
+            if (balance > 0) {
+                amountOwed.put(user, balance);
+            }
         }
 
         return amountOwed;
