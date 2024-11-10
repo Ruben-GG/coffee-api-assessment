@@ -1,11 +1,12 @@
 package com.assessment.coffeeassessment.controller;
 
 import com.assessment.coffeeassessment.service.PaymentService;
-import org.springframework.http.ResponseEntity;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/payments/v1")
@@ -13,19 +14,26 @@ public class PaymentController {
 
     private final PaymentService paymentService;
 
+    @Autowired
     public PaymentController(PaymentService paymentService) {
         this.paymentService = paymentService;
     }
 
-    @GetMapping("/amount-paid/{user}")
-    public ResponseEntity<Double> getAmountPaid(@PathVariable String user) {
-        double amountPaid = paymentService.getAmountPaidForUser(user);
-        return ResponseEntity.ok(amountPaid);
+    /**
+     * Endpoint to get the total amount paid by each user.
+     * @return a map with user as key and total paid amount as value
+     */
+    @GetMapping("/amount-paid")
+    public Map<String, Double> getAmountPaidByAllUsers() {
+        return paymentService.getAmountPaidByAllUsers();
     }
 
-    @GetMapping("/amount-owed/{user}")
-    public ResponseEntity<Double> getAmountOwed(@PathVariable String user) {
-        double amountOwed = paymentService.getAmountOwedForUser(user);
-        return ResponseEntity.ok(amountOwed);
+    /**
+     * Endpoint to get the total amount owed by each user.
+     * @return a map with user as key and amount owed as value
+     */
+    @GetMapping("/amount-owed")
+    public Map<String, Double> getAmountOwedByAllUsers() {
+        return paymentService.getAmountOwedByAllUsers();
     }
 }

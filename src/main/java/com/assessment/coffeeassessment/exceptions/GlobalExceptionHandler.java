@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 /**
  * Global exception handler that returns a structured JSON response
  * containing the error message and HTTP status code.
- *
+ * <p>
  * It handles different custom exceptions and maps them to the appropriate HTTP status.
  */
 @ControllerAdvice
@@ -34,18 +34,6 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(ProductNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleProductNotFound(ProductNotFoundException ex) {
-        ErrorResponse errorResponse = new ErrorResponse(ex.getMessage(), HttpStatus.NOT_FOUND.value());
-        return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
-    }
-
-    /**
-     * Handles OrderNotFoundException and returns a structured JSON response.
-     *
-     * @param ex the exception that was thrown
-     * @return a ResponseEntity containing the error response in JSON format
-     */
-    @ExceptionHandler(OrderNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleOrderNotFound(OrderNotFoundException ex) {
         ErrorResponse errorResponse = new ErrorResponse(ex.getMessage(), HttpStatus.NOT_FOUND.value());
         return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
     }

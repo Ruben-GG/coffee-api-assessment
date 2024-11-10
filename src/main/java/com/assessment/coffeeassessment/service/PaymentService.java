@@ -1,22 +1,20 @@
 package com.assessment.coffeeassessment.service;
 
-import com.assessment.coffeeassessment.exceptions.OrderNotFoundException;
+import com.assessment.coffeeassessment.exceptions.InvalidJsonFormatException;
 import com.assessment.coffeeassessment.exceptions.ProductNotFoundException;
 import com.assessment.coffeeassessment.model.Order;
 import com.assessment.coffeeassessment.model.Payment;
 import com.assessment.coffeeassessment.model.Product;
 import com.assessment.coffeeassessment.utils.JsonUtils;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Service to handle payment-related operations.
- * <p>
- * This service allows calculating the amount paid and the amount owed by a user
- * based on orders and payments.
- * </p>
  */
 @Slf4j
 @Service
@@ -24,75 +22,69 @@ public class PaymentService {
 
     private final JsonUtils jsonUtils;
 
+    @Autowired
     public PaymentService(JsonUtils jsonUtils) {
         this.jsonUtils = jsonUtils;
     }
 
     /**
-     * Get the total amount paid by a user.
+     * Get the total amount paid by all users.
      *
-     * @param user the user whose paid amount is to be calculated
-     * @return the total amount paid by the user
-     * @throws OrderNotFoundException if no payments are found for the user
+     * @return a map with the total amount paid by each user
+     * @throws InvalidJsonFormatException if any json data is malformed
      */
-    public double getAmountPaidForUser(String user) {
-        log.info("Fetching amount paid for user: {}", user);
+    public Map<String, Double> getAmountPaidByAllUsers() {
+        log.info("Fetching amount paid by all users");
 
-        // Load payments and check if the user has any payments
+        // Load payments and group by user
         List<Payment> payments = jsonUtils.loadPayments();
 
-        if (payments.stream().noneMatch(payment -> payment.getUser().equals(user))) {
-            log.error("No payments found for user: {}", user);
-            throw new OrderNotFoundException("No orders found for user: " + user);
-        }
-
-        double totalPaid = payments.stream()
-                .filter(payment -> payment.getUser().equals(user))
-                .mapToDouble(Payment::getAmount)
-                .sum();
-
-        if (totalPaid == 0.0) {
-            log.error("Total paid is zero for user: {}", user);
-            throw new OrderNotFoundException("No orders found for user: " + user);
-        }
-
-        return totalPaid;
+        // Group payments by user and sum the amount for each user
+        return payments.stream()
+                .collect(Collectors.groupingBy(
+                        Payment::getUser,
+                        Collectors.summingDouble(Payment::getAmount)
+                ));
     }
 
     /**
-     * Get the total amount owed by a user.
+     * Get the total amount owed by all users.
      *
-     * @param user the user whose owed amount is to be calculated
-     * @return the total amount owed by the user
-     * @throws OrderNotFoundException   if no orders are found for the user
-     * @throws ProductNotFoundException if any ordered product is not found
+     * @return a map with the total amount owed by each user
+     * @throws InvalidJsonFormatException if any json data is malformed
      */
-    public double getAmountOwedForUser(String user) {
-        log.info("Fetching amount owed for user: {}", user);
+    public Map<String, Double> getAmountOwedByAllUsers() {
+        log.info("Fetching amount owed by all users");
 
-        // Load orders and check if the user has any orders
+        // Load orders and products
         List<Order> orders = jsonUtils.loadOrders();
         List<Product> products = jsonUtils.loadProducts();
 
-        if (orders.stream().noneMatch(order -> order.getUser().equals(user))) {
-            log.error("No orders found for user: {}", user);
-            throw new OrderNotFoundException("No orders found for user: " + user);
+        // Group orders by user and calculate the total amount owed by each user
+        Map<String, Double> amountOwedByUser = new HashMap<>();
+
+        for (Order order : orders) {
+            if (order.getUser() == null) continue;
+
+            // Calculate the product price
+            double price = getProductPrice(order, products);
+
+            // Accumulate total owed per user
+            amountOwedByUser.merge(order.getUser(), price, Double::sum);
         }
 
-        double totalOwed = orders.stream()
-                .filter(order -> order.getUser().equals(user))
-                .mapToDouble(order -> getProductPrice(order, products))
-                .sum();
+        // Calculate total paid for each user
+        Map<String, Double> amountPaidByUser = getAmountPaidByAllUsers();
 
-        if (totalOwed == 0.0) {
-            log.error("Total owed is zero for user: {}", user);
-            throw new OrderNotFoundException("No orders found for user: " + user);
+        // Calculate the difference (amount owed - amount paid) for each user
+        Map<String, Double> amountOwed = new HashMap<>();
+        for (String user : amountOwedByUser.keySet()) {
+            double totalOwed = amountOwedByUser.get(user);
+            double totalPaid = amountPaidByUser.getOrDefault(user, 0.0);
+            amountOwed.put(user, totalOwed - totalPaid);
         }
 
-        // Calculate amount paid
-        double totalPaid = getAmountPaidForUser(user);
-
-        return totalOwed - totalPaid;
+        return amountOwed;
     }
 
     /**
