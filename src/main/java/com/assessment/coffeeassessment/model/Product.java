@@ -2,9 +2,10 @@ package com.assessment.coffeeassessment.model;
 
 import lombok.Data;
 
+import java.util.Map;
+
 @Data
 public class Product {
-    private int id;
-    private String name;
-    private double price;
+    private String drinkName;
+    private Map<String, Double> prices;
 }
